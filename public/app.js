@@ -112,6 +112,7 @@ function switchLanguage(lang) {
   }
 }
 
+
 // 키오스크 스타일 적용 (연한 주황색 배경)
 document.body.style.background = "linear-gradient(135deg, #FFE4B5, #FFDAB9, #FFCCCB)";
 document.body.style.color = "#333";
@@ -497,6 +498,17 @@ additionalStyle.textContent = `
      justify-content: center;
      margin-bottom: 20px;
    }
+
+   #qr-fixed {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 100px;
+  height: 100px;
+  z-index: 9999;
+  opacity: 0.9;
+}
+
  }
 `;
 document.head.appendChild(additionalStyle);
@@ -523,6 +535,13 @@ document.body.innerHTML = `
    </div>
  </div>
 `;
+
+// ✅ QR 이미지를 다시 append해서 고정
+const qrImage = document.createElement("img");
+qrImage.src = "/TasteOfKorea_app_QR.png";
+qrImage.id = "qr-fixed";
+qrImage.alt = "QR코드";
+document.body.appendChild(qrImage);
 
 const result = document.createElement('div');
 result.id = 'result';
