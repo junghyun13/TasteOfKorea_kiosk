@@ -1,14 +1,18 @@
 // ✅ Node.js - server.js
+require('dotenv').config();  // 꼭 맨 위에!
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const WebSocket = require('ws');
 const path = require('path');
-
+const Stripe = require('stripe');
 const app = express();
 const port = 3000;
 const wsPort = 3001;
-
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const db = new sqlite3.Database('db.sqlite');
+
+app.use(express.json());
+
 
 // ✅ menuId → 메뉴명 매핑
 const class_indices = {
@@ -141,51 +145,110 @@ const menuNames = Object.entries(class_indices).reduce((obj, [k, v]) => {
   return obj;
 }, {});
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// ✅ 장바구니 저장
+app.post('/api/cart', (req, res) => {
+  console.log('📦 받은 장바구니 요청:', req.body);  // ✅ 디버깅용 로그
+  const { sessionId, restaurant, menuId } = req.body;
+  if (!sessionId || !restaurant || typeof menuId === 'undefined') {
+    return res.status(400).send("필수 정보 누락");
+  }
+  const createdAt = new Date().toISOString();
 
-const wss = new WebSocket.Server({ port: wsPort });
-let clients = [];
+  db.get(`SELECT menu, price, imageUrl FROM menus WHERE restaurant = ? AND menuId = ? ORDER BY created_at DESC LIMIT 1`,
+    [restaurant, menuId], (err, row) => {
+      if (err || !row) return res.status(404).send("해당 메뉴 정보 없음");
+      db.run(`INSERT INTO cart (sessionId, restaurant, menuId, menu, price, imageUrl, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [sessionId, restaurant, menuId, row.menu, row.price, row.imageUrl, createdAt],
+        (insertErr) => {
+          if (insertErr) return res.status(500).send("장바구니 저장 오류");
+          res.send("장바구니에 저장됨");
+        });
+    });
+});
 
-wss.on('connection', (ws) => {
-  clients.push(ws);
-  ws.on('close', () => {
-    clients = clients.filter(c => c !== ws);
+// ✅ 장바구니 삭제 (비우기)
+app.delete('/api/cart/:sessionId', (req, res) => {
+  const sessionId = req.params.sessionId;
+  db.run(`DELETE FROM cart WHERE sessionId = ?`, [sessionId], function(err) {
+    if (err) return res.status(500).send("장바구니 삭제 오류");
+    res.send("장바구니 비움 완료");
   });
 });
 
-function broadcast(data) {
-  const msg = JSON.stringify(data);
-  console.log("📢 broadcasting:", msg);  // ✅ 여기에 추가!
-  clients.forEach(c => c.send(msg));
-}
+// ✅ 장바구니 조회
+app.get('/api/cart/:sessionId', (req, res) => {
+  const sessionId = req.params.sessionId;
+  db.all(`SELECT * FROM cart WHERE sessionId = ? ORDER BY created_at DESC`, [sessionId], (err, rows) => {
+    if (err) return res.status(500).send("장바구니 조회 오류");
+    res.json(rows);
+  });
+});
 
+app.delete('/api/cart/item/:id', (req, res) => {
+  const id = req.params.id;
+  db.run(`DELETE FROM cart WHERE id = ?`, [id], function(err) {
+    if (err) return res.status(500).json({ error: "장바구니 항목 삭제 오류" });
+    if (this.changes === 0) return res.status(404).json({ error: "해당 항목 없음" });
+    res.send("장바구니 항목 삭제 완료");
+  });
+});
+
+
+
+// ✅ 결제 요청
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'krw',
+      payment_method_types: ['card']
+    });
+    res.send({ clientSecret: paymentIntent.client_secret });
+  } catch (e) {
+    console.error('❌ Stripe 결제 intent 생성 오류:', e);
+    res.status(500).json({ error: "결제 요청 오류" });  // ✅ 수정됨
+  }
+});
+
+
+// ✅ 식당 목록
 app.get('/api/restaurants', (req, res) => {
   db.all(`SELECT DISTINCT restaurant FROM menus`, (err, rows) => {
     if (err) return res.status(500).send("DB 오류");
-    const names = rows.map(r => r.restaurant);
-    res.json(names);
+    res.json(rows.map(r => r.restaurant));
   });
 });
 
+// ✅ 식당별 메뉴 조회
+app.get('/api/menus/:restaurant', (req, res) => {
+  const restaurant = req.params.restaurant;
+  db.all(
+    `SELECT menuId, menu, price, imageUrl FROM menus 
+     WHERE restaurant = ? 
+     GROUP BY menuId`,  // 중복 제거 목적
+    [restaurant],
+    (err, rows) => {
+      if (err) return res.status(500).send("DB 오류");
+      res.json(rows);
+    }
+  );
+});
 
 
+// ✅ 주문 처리 및 브로드캐스트
 app.post('/api/order', (req, res) => {
   const { restaurantName, menuId } = req.body;
-  const menuName = menuNames[menuId] || '알 수 없는 메뉴';
   const createdAt = new Date().toISOString();
-
-  console.log("💬 POST 요청:", req.body);
+  const menuName = menuNames[menuId] || `메뉴${menuId}`;
 
   db.get(`SELECT price, imageUrl FROM menus WHERE restaurant = ? AND menuId = ? ORDER BY created_at DESC LIMIT 1`,
     [restaurantName, menuId], (err, row) => {
-      if (err || !row) {
-        console.error("❌ 메뉴 없음 또는 DB 오류:", err);
-        return res.status(404).send("해당 식당/메뉴 정보를 찾을 수 없습니다.");
-      }
+      if (err || !row) return res.status(404).send("해당 식당/메뉴 정보를 찾을 수 없습니다.");
 
       const data = {
         restaurant: restaurantName,
+        menuId,  // ✅ 추가
         menu: menuName,
         price: row.price,
         imageUrl: row.imageUrl,
@@ -203,15 +266,31 @@ app.post('/api/order', (req, res) => {
     });
 });
 
-app.get('/api/menus/:restaurant', (req, res) => {
-  const restaurant = req.params.restaurant;
-  db.all(`SELECT DISTINCT menuId, menu FROM menus WHERE restaurant = ?`, [restaurant], (err, rows) => {
-    if (err) return res.status(500).send("DB 오류");
-    res.json(rows);
+// ✅ 정적 파일 서비스 마지막에 배치
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.listen(port, () => {
+  console.log(`✅ Kiosk server running at http://localhost:${port}`);
+});
+
+// ✅ WebSocket 설정
+const wss = new WebSocket.Server({ port: wsPort });
+let clients = [];
+
+wss.on('connection', (ws) => {
+  clients.push(ws);
+  ws.on('close', () => {
+    clients = clients.filter(c => c !== ws);
   });
 });
 
-db.serialize(() => {
+function broadcast(data) {
+  const msg = JSON.stringify(data);
+  clients.forEach(c => c.send(msg));
+}
+
+// ✅ DB 테이블 생성
+const dbInit = () => {
   db.run(`CREATE TABLE IF NOT EXISTS menus (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     restaurant TEXT,
@@ -221,8 +300,17 @@ db.serialize(() => {
     imageUrl TEXT,
     created_at TEXT
   )`);
-});
+  db.run(`CREATE TABLE IF NOT EXISTS cart (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sessionId TEXT,
+    restaurant TEXT,
+    menuId INTEGER,
+    menu TEXT,
+    price INTEGER,
+    imageUrl TEXT,
+    created_at TEXT
+  )`);
+};
+db.serialize(dbInit);
 
-app.listen(port, () => {
-  console.log(`✅ Kiosk server running at http://localhost:${port}`);
-});
+
