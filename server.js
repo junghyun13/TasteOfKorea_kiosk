@@ -1,6 +1,7 @@
 // ✅ Node.js - server.js
 require('dotenv').config();  // 꼭 맨 위에!
 const express = require('express');
+const cors = require('cors');  // ✅ 추가
 const sqlite3 = require('sqlite3').verbose();
 const WebSocket = require('ws');
 const path = require('path');
@@ -10,7 +11,11 @@ const port = 3000;
 const wsPort = 3001;
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const db = new sqlite3.Database('db.sqlite');
-
+app.use(cors({  // ✅ 위치 주의: express.json()보다 위에 있어도 됩니다
+  origin: '*',  // 개발 중엔 * 가능 / 배포 시엔 실제 도메인으로
+  methods: ['GET', 'POST', 'DELETE'],
+  allowedHeaders: ['Content-Type']
+}));
 app.use(express.json());
 
 
