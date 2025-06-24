@@ -32,7 +32,7 @@ const translations = {
     cashPaymentComplete: '🎉 현금 결제가 완료되었습니다!',
     cardPaymentComplete: '🎉 카드 결제가 완료되었습니다!',
     paymentAmount: '💰 결제금액: {amount}원',
-    autoReset: '⏳ 10초 후 자동으로 초기화됩니다...',
+    autoReset: '⏳ 5초 후 자동으로 초기화됩니다...',
     wrongPassword: '❌ 비밀번호가 틀렸습니다',
     enterCardInfo: '💳 카드 정보를 입력해 주세요',
     paymentAmountLabel: '📊 결제금액: {amount}원',
@@ -70,7 +70,7 @@ const translations = {
     cashPaymentComplete: '🎉 Cash payment completed!',
     cardPaymentComplete: '🎉 Card payment completed!',
     paymentAmount: '💰 Payment amount: ${amount}',
-    autoReset: '⏳ Auto reset in 10 seconds...',
+    autoReset: '⏳ Auto reset in 5 seconds...',
     wrongPassword: '❌ Wrong password',
     enterCardInfo: '💳 Please enter card information',
     paymentAmountLabel: '📊 Payment amount: ${amount}',
@@ -502,7 +502,7 @@ additionalStyle.textContent = `
    #qr-fixed {
   position: fixed;
   top: 10px;
-  right: 10px;
+  left: 20px;
   width: 100px;
   height: 100px;
   z-index: 9999;
@@ -916,7 +916,7 @@ function handleCashPayment(totalAmount) {
 // ✅ 현금 결제 비밀번호 확인 (paste.txt에 누락됨)
 function confirmCashSecret(totalAmount) {
   const secret = document.getElementById('cash-secret').value;
-  if (secret === 'dlwjdgus') {
+  if (secret === 'junghyen') {
     result.innerHTML = `
       <div class="order-complete">
         <h2>${t('cashPaymentComplete')}</h2>
@@ -934,7 +934,7 @@ function confirmCashSecret(totalAmount) {
       loadRestaurants();
       result.innerHTML = "";
       updateCartUI();
-    }, 10000);
+    }, 5000);
   } else {
     alert(t('wrongPassword'));
   }
@@ -993,7 +993,7 @@ async function handleCardPayment(totalAmount) {
         loadRestaurants();
         result.innerHTML = "";
         updateCartUI();
-      }, 10000);
+      }, 5000);
     };
   } catch (e) {
     console.error("Stripe 결제 오류:", e);

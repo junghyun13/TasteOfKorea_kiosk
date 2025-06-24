@@ -152,13 +152,12 @@ app.post('/api/cart', (req, res) => {
   if (!sessionId || !restaurant || typeof menuId === 'undefined') {
     return res.status(400).send("필수 정보 누락");
   }
-  const createdAt = new Date().toISOString();
 
-  db.get(`SELECT menu, price, imageUrl FROM menus WHERE restaurant = ? AND menuId = ? ORDER BY created_at DESC LIMIT 1`,
+  db.get(`SELECT menu, price, imageUrl FROM menus WHERE restaurant = ? AND menuId = ? LIMIT 1`,
     [restaurant, menuId], (err, row) => {
       if (err || !row) return res.status(404).send("해당 메뉴 정보 없음");
-      db.run(`INSERT INTO cart (sessionId, restaurant, menuId, menu, price, imageUrl, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [sessionId, restaurant, menuId, row.menu, row.price, row.imageUrl, createdAt],
+      db.run(`INSERT INTO cart (sessionId, restaurant, menuId, menu, price, imageUrl) VALUES (?, ?, ?, ?, ?, ?)`,
+        [sessionId, restaurant, menuId, row.menu, row.price, row.imageUrl],
         (insertErr) => {
           if (insertErr) return res.status(500).send("장바구니 저장 오류");
           res.send("장바구니에 저장됨");
@@ -178,7 +177,7 @@ app.delete('/api/cart/:sessionId', (req, res) => {
 // ✅ 장바구니 조회
 app.get('/api/cart/:sessionId', (req, res) => {
   const sessionId = req.params.sessionId;
-  db.all(`SELECT * FROM cart WHERE sessionId = ? ORDER BY created_at DESC`, [sessionId], (err, rows) => {
+  db.all(`SELECT * FROM cart WHERE sessionId = ?`, [sessionId], (err, rows) => {
     if (err) return res.status(500).send("장바구니 조회 오류");
     res.json(rows);
   });
@@ -239,10 +238,9 @@ app.get('/api/menus/:restaurant', (req, res) => {
 // ✅ 주문 처리 및 브로드캐스트
 app.post('/api/order', (req, res) => {
   const { restaurantName, menuId } = req.body;
-  const createdAt = new Date().toISOString();
   const menuName = menuNames[menuId] || `메뉴${menuId}`;
 
-  db.get(`SELECT price, imageUrl FROM menus WHERE restaurant = ? AND menuId = ? ORDER BY created_at DESC LIMIT 1`,
+  db.get(`SELECT price, imageUrl FROM menus WHERE restaurant = ? AND menuId = ? LIMIT 1`,
     [restaurantName, menuId], (err, row) => {
       if (err || !row) return res.status(404).send("해당 식당/메뉴 정보를 찾을 수 없습니다.");
 
@@ -252,14 +250,14 @@ app.post('/api/order', (req, res) => {
         menu: menuName,
         price: row.price,
         imageUrl: row.imageUrl,
-        created_at: createdAt
       };
 
       db.run(
-        `INSERT INTO menus (restaurant, menuId, menu, price, imageUrl, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [restaurantName, menuId, menuName, row.price, row.imageUrl, createdAt]
-      );
+  `REPLACE INTO menus (restaurant, menuId, menu, price, imageUrl)
+   VALUES (?, ?, ?, ?, ?)`,
+  [restaurantName, menuId, menuName, row.price, row.imageUrl]
+);
+
 
       broadcast(data);
       res.send("Order received");
@@ -298,8 +296,9 @@ const dbInit = () => {
     menu TEXT,
     price INTEGER,
     imageUrl TEXT,
-    created_at TEXT
+    UNIQUE(restaurant, menuId)
   )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS cart (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sessionId TEXT,
@@ -307,10 +306,9 @@ const dbInit = () => {
     menuId INTEGER,
     menu TEXT,
     price INTEGER,
-    imageUrl TEXT,
-    created_at TEXT
+    imageUrl TEXT
   )`);
 };
-db.serialize(dbInit);
 
+db.serialize(dbInit);
 
