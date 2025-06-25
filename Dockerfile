@@ -11,10 +11,10 @@ RUN npm install
 # 4. 나머지 전체 소스 복사 (node_modules는 무시됨)
 COPY . .
 
-# 5. 포트 열기
+# 열어야 할 포트들
 EXPOSE 3000
+EXPOSE 3001
 
-EXPOSE 3001  # ✅ 이 줄 추가
 
 # 6. 앱 실행
 CMD ["node", "server.js"]
