@@ -1062,7 +1062,8 @@ function displayOrderResult(data) {
 
 // ✅ 주문 결과 수신 WebSocket (paste.txt에 누락됨)
 try {
- const ws = new WebSocket("wss://tastekiosk.site:3001");
+ const ws = new WebSocket("wss://tastekiosk.site/ws/");
+
  
  ws.onopen = () => {
    console.log("✅ WebSocket 연결 성공");
