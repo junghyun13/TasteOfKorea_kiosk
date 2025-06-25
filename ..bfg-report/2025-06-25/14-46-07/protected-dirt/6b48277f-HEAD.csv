@@ -1,0 +1,3 @@
+6d6c8536e3c66352b009821224463cb3ec2ab244,MODIFY,regular-file,node_modules/stripe/CHANGELOG.md,379810,1413-1414;1630
+ed831bf64160c7a7abfff9aa614af49c7ab121fb,MODIFY,regular-file,node_modules/stripe/README.md,23292,39;52;103;211;240;283;294;300;333;421;521;545;555;571
+d4a1b4c7835f27eade80a8e70f124eca87c010d3,MODIFY,regular-file,node_modules/stripe/types/test/typescriptTest.ts,8812,11;15;17;22;28

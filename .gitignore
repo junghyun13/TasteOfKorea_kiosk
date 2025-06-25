@@ -1,1 +1,5 @@
 .env
+replacements.txt
+
+# BFG 실행 후 생성된 민감 보고서
+.bfg-report/
