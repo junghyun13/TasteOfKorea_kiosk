@@ -14,5 +14,7 @@ COPY . .
 # 5. 포트 열기
 EXPOSE 3000
 
+EXPOSE 3001  # ✅ 이 줄 추가
+
 # 6. 앱 실행
 CMD ["node", "server.js"]
