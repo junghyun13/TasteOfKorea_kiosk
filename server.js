@@ -281,11 +281,39 @@ const wss = new WebSocket.Server({ port: wsPort });
 let clients = [];
 
 wss.on('connection', (ws) => {
+  console.log("✅ 클라이언트 WebSocket 연결됨");
+
   clients.push(ws);
+  ws.isAlive = true;
+
+  // pong 수신 시 alive 플래그 재설정
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
   ws.on('close', () => {
     clients = clients.filter(c => c !== ws);
+    console.log("❌ 클라이언트 WebSocket 연결 종료");
   });
 });
+
+// 🛠 ping/pong으로 연결 확인 및 유지
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log("⚠️ 응답 없는 클라이언트 연결 종료");
+      return ws.terminate();
+    }
+
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 3000); // 3초 간격
+
+// 서버 종료 시 인터벌 제거
+wss.on('close', () => clearInterval(interval));
+
+console.log(`✅ WebSocket 서버 포트 ${wsPort}에서 실행 중`);
 
 function broadcast(data) {
   const msg = JSON.stringify(data);

@@ -1059,42 +1059,42 @@ function displayOrderResult(data) {
   `;
 }
 
+// ✅ WebSocket 자동 연결 + 재연결
+function connectWebSocket() {
+  const ws = new WebSocket("wss://tastekiosk.site/ws/");
 
-// ✅ 주문 결과 수신 WebSocket (paste.txt에 누락됨)
-try {
- const ws = new WebSocket("wss://tastekiosk.site/ws/");
+  ws.onopen = () => {
+    console.log("✅ WebSocket 연결 성공");
+  };
 
- 
- ws.onopen = () => {
-   console.log("✅ WebSocket 연결 성공");
- };
- 
- ws.onerror = (err) => {
-   console.error("❌ WebSocket 에러:", err);
- };
- 
- ws.onclose = () => {
-   console.log("🔌 WebSocket 연결 종료");
- };
- 
- ws.onmessage = (e) => {
-   try {
-     const data = JSON.parse(e.data);
-     console.log("📨 받은 메시지:", data);
-     displayOrderResult(data);
-     updateCartUI();
-   } catch (parseError) {
-     console.error("메시지 파싱 오류:", parseError);
-     result.innerHTML = `
-       <div class="status-message error-message">
-         ❌ ${currentLanguage === 'ko' ? '주문 처리 중 오류가 발생했습니다' : 'Order processing error occurred'}.
-       </div>
-     `;
-   }
- };
-} catch (wsError) {
- console.error("WebSocket 초기화 오류:", wsError);
+  ws.onerror = (err) => {
+    console.error("❌ WebSocket 에러:", err);
+  };
+
+  ws.onclose = () => {
+    console.warn("🔌 WebSocket 연결 종료 - 3초 후 재연결 시도");
+    setTimeout(connectWebSocket, 3000);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      console.log("📨 받은 메시지:", data);
+      displayOrderResult(data);
+      updateCartUI();
+    } catch (parseError) {
+      console.error("메시지 파싱 오류:", parseError);
+      result.innerHTML = `
+        <div class="status-message error-message">
+          ❌ ${currentLanguage === 'ko' ? '주문 처리 중 오류가 발생했습니다' : 'Order processing error occurred'}.
+        </div>
+      `;
+    }
+  };
 }
+
+connectWebSocket();  // ✅ 최초 연결
+
 
 // ✅ 페이지 로드 시 초기화 (paste.txt에 누락됨)
 loadRestaurants();
