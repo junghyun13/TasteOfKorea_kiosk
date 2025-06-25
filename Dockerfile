@@ -4,14 +4,14 @@ FROM node:20
 # 2. 작업 디렉토리 설정
 WORKDIR /app
 
-# 3. package.json과 package-lock.json만 먼저 복사하고 npm install
+# 3. 종속성 설치 (효율적 캐시 사용 위해 먼저 복사)
 COPY package*.json ./
 RUN npm install
 
-# 4. 나머지 전체 소스 복사 (node_modules 제외)
+# 4. 나머지 전체 소스 복사 (node_modules는 무시됨)
 COPY . .
 
-# 5. 포트 오픈
+# 5. 포트 열기
 EXPOSE 3000
 
 # 6. 앱 실행

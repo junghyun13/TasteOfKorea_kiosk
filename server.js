@@ -1,5 +1,5 @@
 // ✅ Node.js - server.js
-//require('dotenv').config();  // 꼭 맨 위에!
+require('dotenv').config();  // 꼭 맨 위에!
 const express = require('express');
 const cors = require('cors');  // ✅ 추가
 const sqlite3 = require('sqlite3').verbose();
