@@ -18,8 +18,8 @@ jobs:
         host: ${{ secrets.GCP_HOST }}
         username: ${{ secrets.GCP_USERNAME }}
         key: ${{ secrets.GCP_SSH_KEY }}
-        source: "."
-        target: "~/tasteofkorea_kisok"  # ✅ 여기 수정
+        source: "."            # 현재 폴더 전체 복사
+        target: "~/tasteofkorea_kisok"
 
     - name: SSH into GCP and deploy container
       uses: appleboy/ssh-action@master
@@ -28,7 +28,8 @@ jobs:
         username: ${{ secrets.GCP_USERNAME }}
         key: ${{ secrets.GCP_SSH_KEY }}
         script: |
-          cd ~/tasteofkorea_kisok  # ✅ 여기도 수정
+          sudo apt update && sudo apt install -y docker.io
+          cd ~/tasteofkorea_kisok
           docker stop tasteofkorea || true
           docker rm tasteofkorea || true
           docker build -t tasteofkorea-image .
