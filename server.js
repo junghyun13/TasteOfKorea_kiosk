@@ -273,7 +273,7 @@ app.post('/api/order', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(port, () => {
-  console.log(`✅ Kiosk server running at http://localhost:${port}`);
+  console.log(`✅ Kiosk server running at http://tastekiosk.site:${port}`);
 });
 
 // ✅ WebSocket 설정
