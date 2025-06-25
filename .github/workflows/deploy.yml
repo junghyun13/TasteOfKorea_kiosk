@@ -33,4 +33,10 @@ jobs:
           docker stop tasteofkorea || true
           docker rm tasteofkorea || true
           docker build -t tasteofkorea-image .
-          docker run -d -p 80:3000 --name tasteofkorea tasteofkorea-image
+          docker run -d \
+            -p 3000:3000 \
+            -p 3001:3001 \
+            --name tasteofkorea \
+            -e STRIPE_SECRET_KEY=REMOVED51RcxYTRIZ0vIX0iB7mnsVZX7lexnV7H7ecairRtgYWFw7kcJH4cR53C5SdTR35rZsL2n8uoWtoNH7EG6P8pHDBq500bGCzyWrU \
+            -v ~/tasteofkorea_kisok/db.sqlite:/app/db.sqlite \
+            tasteofkorea-image
